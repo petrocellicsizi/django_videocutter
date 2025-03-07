@@ -1,0 +1,62 @@
+{% extends 'base.html' %}
+
+{% block title %}Home - Video Editor{% endblock %}
+
+{% block content %}
+<div class="text-center">
+    <h1 class="mb-4">Welcome to Video Editor</h1>
+    <p class="lead">Easily upload, edit, and compile videos and images into a seamless production.</p>
+</div>
+<div class="mt-5 row text-center">
+    <div class="col-md-4">
+        <i class="fas fa-upload fa-3x mb-3 text-primary"></i>
+        <h4>Upload Your Media</h4>
+        <p>Upload images and videos to start editing.</p>
+    </div>
+    <div class="col-md-4">
+        <i class="fas fa-edit fa-3x mb-3 text-success"></i>
+        <h4>Edit & Arrange</h4>
+        <p>Rearrange media, trim videos, and add effects.</p>
+    </div>
+    <div class="col-md-4">
+        <i class="fas fa-video fa-3x mb-3 text-danger"></i>
+        <h4>Export & Share</h4>
+        <p>Render your final video and share it easily.</p>
+    </div>
+</div>
+
+<div class="text-center">
+    <h3 style="margin-top: 20px;" >Choose one from the three formats and start right now!</h3>
+    <p style="margin-bottom: 20px;">Or try them all ... :))</p>
+</div>
+
+<div class="mt-5 row text-center d-flex justify-content-center">
+    <div class="col-md-4">
+        <a href="{% url 'create_project' %}" class="card shadow-sm p-3 text-decoration-none" style="border-radius: 15px; background: url('media/city.jpg') no-repeat center center; background-size: cover; color: white;">
+            <div class="card-body">
+                <i class="fas fa-video fa-2x mb-2"></i>
+                <h4 class="font-weight-bold">Life Story</h4>
+                <p>Create a beautiful narrative of someone's life journey</p>
+            </div>
+        </a>
+    </div>
+    <div class="col-md-4">
+        <a href="{% url 'create_project' %}" class="card shadow-sm p-3 text-decoration-none" style="border-radius: 15px; background: url('media/table.jpg') no-repeat center center; background-size: cover; color: white;">
+            <div class="card-body">
+                <i class="fas fa-camera fa-2x mb-2"></i>
+                <h4 class="font-weight-bold">Event Coverage</h4>
+                <p>Compile highlights from a special event or occasion</p>
+            </div>
+        </a>
+    </div>
+    <div class="col-md-4">
+        <a href="{% url 'create_project' %}" class="card shadow-sm p-3 text-decoration-none" style="border-radius: 15px; background: url('media/bulb.avif') no-repeat center center; background-size: cover; color: white;">
+            <div class="card-body">
+                <i class="fas fa-qrcode fa-2x mb-2"></i>
+                <h4 class="font-weight-bold">Memory Collection</h4>
+                <p>Transform your collection of memories into a story</p>
+            </div>
+        </a>
+    </div>
+</div>
+{% endblock %}

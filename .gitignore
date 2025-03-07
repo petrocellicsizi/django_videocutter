@@ -2,3 +2,4 @@
 media/
 myenv/
 venv/
+__pycache__/

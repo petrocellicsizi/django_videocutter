@@ -1,0 +1,185 @@
+{% extends 'base.html' %}
+{% load crispy_forms_tags %}
+
+{% block title %}
+    {% if project %}
+        {{ project.title }} - Media Processor
+    {% else %}
+        Create New Project - Media Processor
+    {% endif %}
+{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/jqueryui/1.12.1/jquery-ui.min.css">
+<style>
+    .media-item {
+        border: 1px solid #ddd;
+        padding: 10px;
+        margin-bottom: 10px;
+        border-radius: 5px;
+        background-color: #f9f9f9;
+    }
+    .media-item-handle {
+        cursor: move;
+        padding: 5px;
+    }
+    .media-preview {
+        max-height: 150px;
+        max-width: 100%;
+        margin-top: 10px;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-md-8">
+        {% if project %}
+            <h2>{{ project.title }}</h2>
+            <p>{{ project.description }}</p>
+            <p>Status: <span class="badge badge-{{ project.status|yesno:'success,warning,danger' }}">{{ project.status }}</span></p>
+
+            <!-- Project Type Selection Form -->
+            <form method="POST" action="{% url 'update_project_type' project.pk %}" class="mb-3">
+                {% csrf_token %}
+                <div class="form-group">
+                    <label for="project-type">Project Type</label>
+                    <select name="type" id="project-type" class="form-control">
+                        <option value="life_story" {% if project.type == "life_story" %}selected{% endif %}>Life Story</option>
+                        <option value="event_coverage" {% if project.type == "event_coverage" %}selected{% endif %}>Event Coverage</option>
+                        <option value="memory_collection" {% if project.type == "memory_collection" %}selected{% endif %}>Memory Collection</option>
+                    </select>
+                    <button type="submit" class="btn btn-primary mt-2">Update Project Type</button>
+                </div>
+            </form>
+
+            {% if project.output_file %}
+            <div class="card mb-4">
+                <div class="card-header bg-success text-white">
+                    <h5 class="mb-0">Processed Video</h5>
+                </div>
+                <div class="card-body">
+                    <video width="100%" controls>
+                        <source src="{{ project.output_file.url }}" type="video/mp4">
+                        Your browser does not support the video tag.
+                    </video>
+                    <a href="{{ project.output_file.url }}" class="btn btn-primary mt-2" download>Download Video</a>
+                </div>
+            </div>
+            {% endif %}
+
+            <h3 class="mt-4">Media Items</h3>
+            {% if items %}
+            <p class="text-muted">Drag and drop to reorder items</p>
+            <div id="media-items-container">
+                {% for item in items %}
+                <div class="media-item" data-id="{{ item.id }}">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div class="media-item-handle">
+                            <i class="fas fa-grip-vertical"></i>
+                        </div>
+                        <h5 class="mb-0">{{ item.get_media_type_display }} {{ forloop.counter }}</h5>
+                        <form method="post" action="{% url 'delete_item' item_id=item.id %}" onsubmit="return confirm('Are you sure you want to delete this item?');">
+                            {% csrf_token %}
+                            <button type="submit" class="btn btn-sm btn-danger">
+                                <i class="fas fa-trash"></i>
+                            </button>
+                        </form>
+                    </div>
+                    {% if item.media_type == 'image' %}
+                    <img src="{{ item.file.url }}" class="media-preview">
+                    {% else %}
+                    <video class="media-preview" controls>
+                        <source src="{{ item.file.url }}" type="video/mp4">
+                        Your browser does not support the video tag.
+                    </video>
+                    {% endif %}
+                </div>
+                {% endfor %}
+            </div>
+
+            <form method="post" action="{% url 'process_project' pk=project.id %}" class="mt-3">
+                {% csrf_token %}
+                <button type="submit" class="btn btn-success" {% if project.status == 'processing' %} disabled {% endif %}>
+                    {% if project.status == 'processing' %}
+                        <span class="spinner-border spinner-border-sm" role="status"></span> Processing...
+                    {% else %}
+                        <i class="fas fa-play-circle"></i> Process Media
+                    {% endif %}
+                </button>
+            </form>
+            {% else %}
+            <div class="alert alert-info">
+                No media items yet. Add some using the form on the right.
+            </div>
+            {% endif %}
+        {% else %}
+            <div class="alert alert-info">
+                <h3>Create a New Project</h3>
+                <p>Fill out the project details to get started.</p>
+            </div>
+        {% endif %}
+    </div>
+
+    <div class="col-md-4">
+        <div class="card">
+            <div class="card-header bg-primary text-white">
+                <h5 class="mb-0">
+                    {% if project %}
+                        Add Media
+                    {% else %}
+                        Create Project
+                    {% endif %}
+                </h5>
+            </div>
+            <div class="card-body">
+                <form method="post" enctype="multipart/form-data">
+                    {% csrf_token %}
+                    {% if not project %}
+                        {{ form|crispy }}
+                        <button type="submit" class="btn btn-success">
+                            <i class="fas fa-plus-circle"></i> Create Project
+                        </button>
+                    {% else %}
+                        {{ form|crispy }}
+                        <button type="submit" class="btn btn-primary">
+                            <i class="fas fa-upload"></i> Upload Media
+                        </button>
+                    {% endif %}
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+{% if project and items %}
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jqueryui/1.12.1/jquery-ui.min.js"></script>
+<script>
+    $(function() {
+        $("#media-items-container").sortable({
+            handle: ".media-item-handle",
+            update: function(event, ui) {
+                var itemOrder = [];
+                $('.media-item').each(function() {
+                    itemOrder.push($(this).data('id'));
+                });
+
+                $.ajax({
+                    url: '{% url "update_item_order" %}',
+                    type: 'POST',
+                    data: {
+                        'item_order[]': itemOrder,
+                        'csrfmiddlewaretoken': '{{ csrf_token }}'
+                    },
+                    success: function(response) {
+                        console.log('Order updated successfully');
+                    }
+                });
+            }
+        });
+    });
+</script>
+{% endif %}
+{% endblock %}
