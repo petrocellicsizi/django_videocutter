@@ -39,21 +39,20 @@ def create_project(request):
             project.user = request.user
             project.save()
             messages.success(request, 'Project created successfully!')
-            return render(request, 'media_app/create_project.html', {
-                'form': MediaItemForm(),
-                'project': project
-            })
+            return redirect('project_detail', pk=project.pk)
+        else:
+            # Show form errors but don't redirect
+            pass
     else:
         form = MediaProjectForm()
 
     return render(request, 'media_app/create_project.html', {'form': form})
 
-
 @login_required
 def project_detail(request, pk):
     project = get_object_or_404(MediaProject, pk=pk, user=request.user)
     items = project.media_items.all().order_by('order')
-    
+
     if request.method == 'POST':
         form = MediaItemForm(request.POST, request.FILES)
         if form.is_valid():
@@ -63,9 +62,15 @@ def project_detail(request, pk):
             media_item.save()
             messages.success(request, 'Media added successfully!')
             return redirect('project_detail', pk=project.pk)
+        else:
+            # Form is not valid, but don't redirect away from the project
+            # Just show error messages
+            for error in form.errors.get('file', []):
+                messages.error(request, error)
+            # Return to the same page with the filled form
     else:
         form = MediaItemForm()
-    
+
     return render(request, 'media_app/create_project.html', {
         'project': project,
         'items': items,

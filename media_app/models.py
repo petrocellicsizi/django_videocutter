@@ -61,3 +61,13 @@ class MediaItem(models.Model):
         if self.file and os.path.isfile(self.file.path):
             os.remove(self.file.path)
         super().delete(*args, **kwargs)
+
+    def clean(self):
+        if self.file:
+            ext = self.file.name.split('.')[-1].lower()
+            image_types = ['jpg', 'jpeg', 'png', 'gif', 'webp', 'heic']
+            video_types = ['mp4', 'mov', 'avi', 'wmv', 'mkv', 'webm']
+
+            if ext not in image_types and ext not in video_types:
+                from django.core.exceptions import ValidationError
+                raise ValidationError("Only image and video files are allowed.")
