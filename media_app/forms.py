@@ -11,7 +11,7 @@ class MediaProjectForm(forms.ModelForm):
 
 class MediaItemForm(forms.ModelForm):
     file = forms.FileField(
-        help_text="Only image files (JPG, PNG, GIF, etc.) and video files (MP4, MOV, etc.) are allowed."
+        help_text="Only image files (JPG, PNG, JPEG) and video files (MP4) are allowed."
     )
 
     class Meta:
@@ -25,8 +25,8 @@ class MediaItemForm(forms.ModelForm):
             ext = file.name.split('.')[-1].lower()
 
             # Define allowed extensions
-            image_types = ['jpg', 'jpeg', 'png', 'gif', 'webp', 'heic']
-            video_types = ['mp4', 'mov', 'avi', 'wmv', 'mkv', 'webm']
+            image_types = ['jpg', 'jpeg', 'png']
+            video_types = ['mp4']
 
             # Check if the file is an image or video
             if ext in image_types:
