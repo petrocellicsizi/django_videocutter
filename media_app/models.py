@@ -32,6 +32,7 @@ class MediaProject(models.Model):
     updated_at = models.DateTimeField(auto_now=True)
     status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='pending')
     output_file = models.FileField(upload_to='outputs/', null=True, blank=True)
+    qr_code = models.FileField(upload_to='qrcodes/', null=True, blank=True)
     type = models.CharField(max_length=20, choices=PROJECT_TYPES, default='life_story')
 
     def __str__(self):
@@ -43,16 +44,16 @@ class MediaItem(models.Model):
         ('image', 'Image'),
         ('video', 'Video'),
     )
-    
+
     project = models.ForeignKey(MediaProject, related_name='media_items', on_delete=models.CASCADE)
     file = models.FileField(upload_to=get_file_path)
     media_type = models.CharField(max_length=10, choices=MEDIA_TYPES)
     order = models.PositiveIntegerField(default=0)
     uploaded_at = models.DateTimeField(auto_now_add=True)
-    
+
     class Meta:
         ordering = ['order']
-    
+
     def __str__(self):
         return f"{self.media_type} for {self.project.title}"
 
@@ -65,9 +66,9 @@ class MediaItem(models.Model):
     def clean(self):
         if self.file:
             ext = self.file.name.split('.')[-1].lower()
-            image_types = ['jpg', 'jpeg', 'png', 'gif', 'webp', 'heic']
-            video_types = ['mp4', 'mov', 'avi', 'wmv', 'mkv', 'webm']
+            image_types = ['jpg', 'jpeg', 'png']
+            video_types = ['mp4']
 
             if ext not in image_types and ext not in video_types:
                 from django.core.exceptions import ValidationError
-                raise ValidationError("Only image and video files are allowed.")
+                raise ValidationError("Only image(jpg,jpeg,png) and video files(mp4) are allowed.")

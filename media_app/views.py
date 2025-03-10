@@ -8,6 +8,9 @@ from django.http import JsonResponse
 from django.views.decorators.http import require_POST
 import threading
 from .media_processor import process_media_project
+import qrcode
+import os
+from django.conf import settings
 
 
 @login_required
@@ -106,16 +109,16 @@ def process_project(request, pk):
 @require_POST
 def update_item_order(request):
     item_ids = request.POST.getlist('item_order[]')
-    
+
     for index, item_id in enumerate(item_ids):
         item = get_object_or_404(MediaItem, id=item_id)
         # Ensure user can only reorder their own items
         if item.project.user != request.user:
             return JsonResponse({'status': 'error'}, status=403)
-        
+
         item.order = index
         item.save()
-    
+
     return JsonResponse({'status': 'success'})
 
 
@@ -123,15 +126,15 @@ def update_item_order(request):
 @require_POST
 def delete_item(request, item_id):
     item = get_object_or_404(MediaItem, id=item_id)
-    
+
     # Ensure user can only delete their own items
     if item.project.user != request.user:
         messages.error(request, 'You do not have permission to delete this item.')
         return redirect('project_detail', pk=item.project.pk)
-    
+
     project_id = item.project.id
     item.delete()
-    
+
     messages.success(request, 'Media item deleted successfully.')
     return redirect('project_detail', pk=project_id)
 
@@ -149,4 +152,60 @@ def check_project_status(request, pk):
     if project.status == 'completed' and project.output_file:
         data['output_file'] = project.output_file.url
 
+        # Update QR code with actual URL if not already updated
+        if project.qr_code and "PLACEHOLDER_URL" in generate_actual_qr_code(request, project):
+            # Full URL to the video
+            video_url = request.build_absolute_uri(project.output_file.url)
+            update_qr_code(project, video_url)
+
+        if project.qr_code:
+            data['qr_code'] = project.qr_code.url
+
     return JsonResponse(data)
+
+
+def generate_actual_qr_code(request, project):
+    """Check if QR code needs to be updated with actual URL"""
+    try:
+        if not project.qr_code:
+            return "No QR code available"
+
+        qr_path = os.path.join(settings.MEDIA_ROOT, project.qr_code.name)
+
+        # Check if the QR code exists
+        if not os.path.exists(qr_path):
+            return "QR code file not found"
+
+        # For debugging - return placeholder to indicate it needs updating
+        return "PLACEHOLDER_URL"
+
+    except Exception as e:
+        print(f"Error checking QR code: {str(e)}")
+        return "Error checking QR code"
+
+
+def update_qr_code(project, video_url):
+    """Update the QR code with the actual video URL"""
+    try:
+        qr_path = os.path.join(settings.MEDIA_ROOT, project.qr_code.name)
+
+        # Create QR code object
+        qr = qrcode.QRCode(
+            version=1,
+            error_correction=qrcode.constants.ERROR_CORRECT_L,
+            box_size=10,
+            border=4,
+        )
+
+        # Add the actual video URL
+        qr.add_data(video_url)
+        qr.make(fit=True)
+
+        # Create and save the QR code image
+        img = qr.make_image(fill="black", back_color="white")
+        img.save(qr_path)
+
+        return True
+    except Exception as e:
+        print(f"Error updating QR code: {str(e)}")
+        return False

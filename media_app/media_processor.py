@@ -5,6 +5,7 @@ from pathlib import Path
 from PIL import Image
 from moviepy.editor import VideoFileClip, ImageClip, concatenate_videoclips
 from django.conf import settings
+import qrcode
 
 
 def process_media_project(project):
@@ -24,6 +25,10 @@ def process_media_project(project):
         # Create output folder if it doesn't exist
         output_folder = os.path.join(settings.MEDIA_ROOT, 'outputs')
         Path(output_folder).mkdir(parents=True, exist_ok=True)
+
+        # Create QR codes folder if it doesn't exist
+        qr_folder = os.path.join(settings.MEDIA_ROOT, 'qrcodes')
+        Path(qr_folder).mkdir(parents=True, exist_ok=True)
 
         media_items = project.media_items.all().order_by('order')
         clips = []
@@ -84,6 +89,17 @@ def process_media_project(project):
             # This ensures Django's FileField knows how to create the URL
             relative_path = os.path.join('outputs', output_filename)
             project.output_file = relative_path
+
+            # Generate QR code for the video
+            qr_filename = f"qr_project_{project.id}_{int(time.time())}.png"
+            qr_path = os.path.join(qr_folder, qr_filename)
+            relative_qr_path = os.path.join('qrcodes', qr_filename)
+
+            # Create QR code with the URL to the video
+            # We're using request.build_absolute_uri in the view, not here
+            # This is just a placeholder that will be replaced in the model
+            generate_qr_code(project, relative_qr_path, qr_path)
+
             project.status = 'completed'
             project.save()
 
@@ -104,4 +120,33 @@ def process_media_project(project):
         print(f"Error processing project: {str(e)}")
         project.status = 'failed'
         project.save()
+        return False
+
+
+def generate_qr_code(project, relative_qr_path, qr_path):
+    """Generate a QR code for the given output video file"""
+    try:
+        # We'll store the relative path first and update the actual URL in the view
+        project.qr_code = relative_qr_path
+
+        # Create QR code object
+        qr = qrcode.QRCode(
+            version=1,
+            error_correction=qrcode.constants.ERROR_CORRECT_L,
+            box_size=10,
+            border=4,
+        )
+
+        # At this point, we don't have the full URL, so we'll use a placeholder
+        # The actual URL will be constructed in the view
+        qr.add_data("PLACEHOLDER_URL")
+        qr.make(fit=True)
+
+        # Create and save the QR code image
+        img = qr.make_image(fill="black", back_color="white")
+        img.save(qr_path)
+
+        return True
+    except Exception as e:
+        print(f"Error generating QR code: {str(e)}")
         return False
