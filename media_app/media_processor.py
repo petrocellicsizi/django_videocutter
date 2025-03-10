@@ -47,7 +47,13 @@ def process_media_project(project):
             print(f"Processing file: {file_path}")
 
             if item.media_type == 'video':
-                video_clip = VideoFileClip(file_path)
+                # Load the video and take only the first 20 seconds
+                video = VideoFileClip(file_path)
+                # If video is shorter than 20 seconds, use the entire video
+                if video.duration > 20:
+                    video_clip = video.subclip(0, 20)
+                else:
+                    video_clip = video
                 clips.append(video_clip)
             else:  # Image processing
                 # Resize image to match target size

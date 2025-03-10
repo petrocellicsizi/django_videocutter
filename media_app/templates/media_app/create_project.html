@@ -37,7 +37,7 @@
         {% if project %}
             <h2>{{ project.title }}</h2>
             <p>{{ project.description }}</p>
-            <p>Status: <span class="badge badge-{{ project.status|yesno:'success,warning,danger' }}">{{ project.status }}</span></p>
+            <p>Status: <span class="badge badge-{{ project.status|yesno:'success,warning,danger' }}" id="project-status">{{ project.status }}</span></p>
 
             <!-- Project Type Selection Form -->
             <form method="POST" action="{% url 'update_project_type' project.pk %}" class="mb-3">
@@ -53,6 +53,7 @@
                 </div>
             </form>
 
+            <div id="video-output-container">
             {% if project.output_file %}
             <div class="card mb-4">
                 <div class="card-header bg-success text-white">
@@ -67,6 +68,7 @@
                 </div>
             </div>
             {% endif %}
+            </div>
 
             <h3 class="mt-4">Media Items</h3>
             {% if items %}
@@ -100,7 +102,7 @@
 
             <form method="post" action="{% url 'process_project' pk=project.id %}" class="mt-3">
                 {% csrf_token %}
-                <button type="submit" class="btn btn-success" {% if project.status == 'processing' %} disabled {% endif %}>
+                <button type="submit" class="btn btn-success" id="process-button" {% if project.status == 'processing' %} disabled {% endif %}>
                     {% if project.status == 'processing' %}
                         <span class="spinner-border spinner-border-sm" role="status"></span> Processing...
                     {% else %}
@@ -179,6 +181,56 @@
                 });
             }
         });
+
+        // Auto-refresh functionality to check project status
+        {% if project.status == 'processing' %}
+        function checkProjectStatus() {
+            $.ajax({
+                url: '{% url "check_project_status" project.id %}',  // We'll create this view
+                type: 'GET',
+                dataType: 'json',
+                success: function(data) {
+                    // Update the status badge
+                    $('#project-status').text(data.status);
+
+                    if (data.status === 'completed') {
+                        // Enable the process button
+                        $('#process-button').prop('disabled', false);
+                        $('#process-button').html('<i class="fas fa-play-circle"></i> Process Media');
+
+                        // Update the video container with the new video
+                        if (data.output_file) {
+                            var videoHtml = `
+                            <div class="card mb-4">
+                                <div class="card-header bg-success text-white">
+                                    <h5 class="mb-0">Processed Video</h5>
+                                </div>
+                                <div class="card-body">
+                                    <video width="100%" controls>
+                                        <source src="${data.output_file}" type="video/mp4">
+                                        Your browser does not support the video tag.
+                                    </video>
+                                    <a href="${data.output_file}" class="btn btn-primary mt-2" download>Download Video</a>
+                                </div>
+                            </div>`;
+                            $('#video-output-container').html(videoHtml);
+                        }
+
+                        // Stop polling once completed
+                        clearInterval(statusChecker);
+                    } else if (data.status === 'failed') {
+                        // Enable the process button with failure notification
+                        $('#process-button').prop('disabled', false);
+                        $('#process-button').html('<i class="fas fa-play-circle"></i> Try Again');
+                        clearInterval(statusChecker);
+                    }
+                }
+            });
+        }
+
+        // Check every 3 seconds
+        var statusChecker = setInterval(checkProjectStatus, 3000);
+        {% endif %}
     });
 </script>
 {% endif %}

@@ -98,7 +98,7 @@ def process_project(request, pk):
     thread.start()
 
     messages.info(request,
-                  'Project processing started. This may take some time. Please refresh the page in a few moments to see results.')
+                  'Project processing started. This may take some time.')
     return redirect('project_detail', pk=project.pk)
 
 
@@ -134,3 +134,19 @@ def delete_item(request, item_id):
     
     messages.success(request, 'Media item deleted successfully.')
     return redirect('project_detail', pk=project_id)
+
+
+@login_required
+def check_project_status(request, pk):
+    """AJAX endpoint to check the processing status of a project"""
+    project = get_object_or_404(MediaProject, pk=pk, user=request.user)
+
+    data = {
+        'status': project.status,
+    }
+
+    # If completed, include the output file URL
+    if project.status == 'completed' and project.output_file:
+        data['output_file'] = project.output_file.url
+
+    return JsonResponse(data)
