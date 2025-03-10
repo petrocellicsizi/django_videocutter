@@ -17,10 +17,26 @@ def process_media_project(project):
         project.status = 'processing'
         project.save()
 
+        # Create a folder for resized images
+        resized_folder = os.path.join(settings.MEDIA_ROOT, 'resized_images')
+        Path(resized_folder).mkdir(parents=True, exist_ok=True)
+
+        # Create output folder if it doesn't exist
+        output_folder = os.path.join(settings.MEDIA_ROOT, 'outputs')
+        Path(output_folder).mkdir(parents=True, exist_ok=True)
+
         media_items = project.media_items.all().order_by('order')
         clips = []
 
-        first_video_clip = None
+        # Define target size for consistency (HD by default)
+        target_size = (1280, 720)
+
+        # Find first video to determine target size (if any)
+        first_video = next((item for item in media_items if item.media_type == 'video'), None)
+        if first_video:
+            video_path = os.path.join(settings.MEDIA_ROOT, first_video.file.name)
+            with VideoFileClip(video_path) as video:
+                target_size = video.size
 
         for item in media_items:
             # Ensure file name exists
@@ -32,31 +48,40 @@ def process_media_project(project):
 
             if item.media_type == 'video':
                 video_clip = VideoFileClip(file_path)
-                if first_video_clip is None:
-                    first_video_clip = video_clip  # Get first video resolution
                 clips.append(video_clip)
-            else:
+            else:  # Image processing
+                # Resize image to match target size
                 img = Image.open(file_path)
+                img_resized = img.resize(target_size)
 
-                # Resize image to match first video resolution
-                if first_video_clip:
-                    img = img.resize(first_video_clip.size)
+                # Save resized image
+                resized_filename = f"resized_{project.id}_{os.path.basename(file_path)}"
+                resized_path = os.path.join(resized_folder, resized_filename)
+                img_resized.save(resized_path)
 
-                img_clip = ImageClip(np.array(img)).set_duration(3).set_fps(25)  # Add FPS and duration
+                # Create image clip from resized image
+                img_clip = ImageClip(resized_path).set_duration(3).set_fps(24)
                 clips.append(img_clip)
 
         if clips:
-            final_clip = concatenate_videoclips(clips)
+            final_clip = concatenate_videoclips(clips, method="compose")
 
+            # Create a unique filename for the output
             output_filename = f"project_{project.id}_{int(time.time())}.mp4"
-            output_path = os.path.join(settings.MEDIA_ROOT, 'outputs', output_filename)
-            Path(os.path.join(settings.MEDIA_ROOT, 'outputs')).mkdir(parents=True, exist_ok=True)
+            # Full path for saving the file
+            output_path = os.path.join(output_folder, output_filename)
 
-            final_clip.write_videofile(output_path, codec='libx264', fps=25)
+            # Save the video file
+            final_clip.write_videofile(output_path, codec='libx264', fps=24)
 
-            project.output_file = os.path.join('outputs', output_filename)
+            # IMPORTANT: Store just the relative path from MEDIA_ROOT
+            # This ensures Django's FileField knows how to create the URL
+            relative_path = os.path.join('outputs', output_filename)
+            project.output_file = relative_path
             project.status = 'completed'
             project.save()
+
+            print(f"Project {project.id} completed. Output file: {relative_path}")
 
             # Close clips properly
             for clip in clips:

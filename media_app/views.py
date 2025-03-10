@@ -48,6 +48,7 @@ def create_project(request):
 
     return render(request, 'media_app/create_project.html', {'form': form})
 
+
 @login_required
 def project_detail(request, pk):
     project = get_object_or_404(MediaProject, pk=pk, user=request.user)
@@ -82,15 +83,22 @@ def project_detail(request, pk):
 @require_POST
 def process_project(request, pk):
     project = get_object_or_404(MediaProject, pk=pk, user=request.user)
-    
+
     if project.media_items.count() == 0:
         messages.error(request, 'Add media to your project before processing!')
         return redirect('project_detail', pk=project.pk)
-    
+
+    # First update the status to let the user know processing has started
+    project.status = 'processing'
+    project.save()
+
     # Start processing in background thread
-    threading.Thread(target=process_media_project, args=(project,)).start()
-    
-    messages.info(request, 'Project processing started. This may take some time.')
+    thread = threading.Thread(target=process_media_project, args=(project,))
+    thread.daemon = True  # Make sure thread doesn't block server shutdown
+    thread.start()
+
+    messages.info(request,
+                  'Project processing started. This may take some time. Please refresh the page in a few moments to see results.')
     return redirect('project_detail', pk=project.pk)
 
 
