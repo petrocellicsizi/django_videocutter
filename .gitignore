@@ -1,5 +1,7 @@
 .idea/
-media/
+media/*
+!media/needed_media/
+!media/needed_media/**
 myenv/
 venv/
 __pycache__/
