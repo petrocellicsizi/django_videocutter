@@ -71,7 +71,7 @@ def process_media_project(project):
                 img_resized.save(resized_path)
 
                 # Create image clip from resized image
-                img_clip = ImageClip(resized_path).set_duration(3).set_fps(24)
+                img_clip = ImageClip(resized_path).set_duration(2).set_fps(24)
                 clips.append(img_clip)
 
         if clips:
