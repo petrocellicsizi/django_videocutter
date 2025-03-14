@@ -34,6 +34,25 @@ def update_project_type(request, pk):
 
 
 @login_required
+def update_project_details(request, pk):
+    project = get_object_or_404(MediaProject, pk=pk, user=request.user)
+
+    if request.method == 'POST':
+        title = request.POST.get('title')
+        description = request.POST.get('description')
+
+        if title:  # Title is required
+            project.title = title
+            project.description = description
+            project.save()
+            messages.success(request, 'Project details updated successfully!')
+        else:
+            messages.error(request, 'Project title cannot be empty.')
+
+    return redirect('project_detail', pk=pk)
+
+
+@login_required
 def create_project(request):
     if request.method == 'POST':
         form = MediaProjectForm(request.POST)
