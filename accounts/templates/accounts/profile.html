@@ -37,6 +37,30 @@
                 <h3 class="mb-0">Your Projects</h3>
             </div>
             <div class="card-body">
+                <!-- Search Form -->
+                <form method="GET" class="mb-4">
+                    <div class="input-group">
+                        <input type="text" name="search" class="form-control" placeholder="Search projects..." value="{{ search_query }}">
+                        <div class="input-group-append">
+                            <button class="btn btn-outline-primary" type="submit">Search</button>
+                            {% if search_query %}
+                                <a href="{% url 'profile' %}" class="btn btn-outline-secondary">Clear</a>
+                            {% endif %}
+                        </div>
+                    </div>
+                </form>
+
+                {% if search_query %}
+                    <div class="alert alert-info mb-3">
+                        Showing results for: <strong>{{ search_query }}</strong>
+                        {% if projects %}
+                            ({{ projects|length }} result{{ projects|length|pluralize }})
+                        {% else %}
+                            (No results)
+                        {% endif %}
+                    </div>
+                {% endif %}
+
                 {% if projects %}
                     <div class="table-responsive">
                         <table class="table table-striped">
@@ -80,7 +104,13 @@
                         </table>
                     </div>
                 {% else %}
-                    <p class="text-muted">You haven't created any projects yet.</p>
+                    <p class="text-muted">
+                        {% if search_query %}
+                            No projects found matching your search.
+                        {% else %}
+                            You haven't created any projects yet.
+                        {% endif %}
+                    </p>
                 {% endif %}
             </div>
         </div>
