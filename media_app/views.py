@@ -15,8 +15,7 @@ from django.conf import settings
 
 @login_required
 def home(request):
-    projects = MediaProject.objects.filter(user=request.user).order_by('-created_at')
-    return render(request, 'media_app/home.html', {'projects': projects})
+    return render(request, 'media_app/home.html')
 
 
 @login_required

@@ -1,11 +1,11 @@
 import os
 import time
-import numpy as np
 from pathlib import Path
 from PIL import Image
-from moviepy.editor import VideoFileClip, ImageClip, concatenate_videoclips
+from moviepy.editor import VideoFileClip, ImageClip, concatenate_videoclips, AudioFileClip
 from django.conf import settings
 import qrcode
+
 
 
 def process_media_project(project):
@@ -59,6 +59,7 @@ def process_media_project(project):
                     video_clip = video.subclip(0, 20)
                 else:
                     video_clip = video
+
                 clips.append(video_clip)
             else:  # Image processing
                 # Resize image to match target size
@@ -97,6 +98,20 @@ def process_media_project(project):
 
         if clips:
             final_clip = concatenate_videoclips(clips, method="compose")
+
+            # Calculate the total duration of the video (photos + videos)
+            total_video_duration = sum([min(20, vid.duration) for vid in clips])
+            audio_path = "media/needed_media/life.mp3"
+            if os.path.exists(audio_path):
+                audio = AudioFileClip(audio_path)
+
+                # Trim the audio to match the total video duration
+                audio = audio.subclip(0, total_video_duration)
+
+                # Set the audio of the video to the loaded and trimmed audio
+                final_clip = final_clip.set_audio(audio)
+            else:
+                print(f"Warning: Audio file '{audio_path}' not found. Proceeding without audio.")
 
             # Create a unique filename for the output
             output_filename = f"project_{project.id}_{int(time.time())}.mp4"
