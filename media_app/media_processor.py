@@ -63,7 +63,28 @@ def process_media_project(project):
             else:  # Image processing
                 # Resize image to match target size
                 img = Image.open(file_path)
-                img_resized = img.resize(target_size)
+                width, height = img.size
+                target_width, target_height = target_size
+                img_aspect = width / height
+                target_aspect = target_width / target_height
+
+                if img_aspect > target_aspect:  # Image is wider than target
+                    new_width = target_width
+                    new_height = int(target_width / img_aspect)
+                else:  # Image is taller than target
+                    new_height = target_height
+                    new_width = int(target_height * img_aspect)
+
+                # Resize image to fit within target dimensions
+                img_resized = img.resize((new_width, new_height), Image.LANCZOS)
+
+                # Create new image with padding
+                new_img = Image.new('RGB', target_size, (0, 0, 0))
+
+                # Paste resized image centered in the padded image
+                paste_x = (target_width - new_width) // 2
+                paste_y = (target_height - new_height) // 2
+                new_img.paste(img_resized, (paste_x, paste_y))
 
                 # Save resized image
                 resized_filename = f"resized_{project.id}_{os.path.basename(file_path)}"
