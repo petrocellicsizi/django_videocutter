@@ -7,7 +7,6 @@ from django.conf import settings
 import qrcode
 
 
-
 def process_media_project(project):
     """Process media items into a single video file"""
     try:
@@ -101,7 +100,19 @@ def process_media_project(project):
 
             # Calculate the total duration of the video (photos + videos)
             total_video_duration = sum([min(20, vid.duration) for vid in clips])
-            audio_path = "media/needed_media/life.mp3"
+
+            # Select audio file based on project type
+            audio_path = None
+            if project.type == 'life_story':
+                audio_path = "media/needed_media/life.mp3"
+            elif project.type == 'event_coverage':
+                audio_path = "media/needed_media/event.mp3"
+            elif project.type == 'memory_collection':
+                audio_path = "media/needed_media/memory.mp3"
+            else:
+                # Default to life story audio if type is not recognized
+                audio_path = "media/needed_media/life.mp3"
+
             if os.path.exists(audio_path):
                 audio = AudioFileClip(audio_path)
 
