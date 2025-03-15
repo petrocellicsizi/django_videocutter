@@ -170,6 +170,8 @@ def check_project_status(request, pk):
     # If completed, include the output file URL
     if project.status == 'completed' and project.output_file:
         data['output_file'] = project.output_file.url
+        # Add success message
+        data['success_message'] = 'Project processing finished!'
 
         # Update QR code with actual URL if not already updated
         if project.qr_code and "PLACEHOLDER_URL" in generate_actual_qr_code(request, project):
@@ -179,7 +181,6 @@ def check_project_status(request, pk):
 
         if project.qr_code:
             data['qr_code'] = project.qr_code.url
-
     return JsonResponse(data)
 
 

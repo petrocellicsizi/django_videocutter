@@ -232,6 +232,14 @@
                         $('#process-button').prop('disabled', false);
                         $('#process-button').html('<i class="fas fa-play-circle"></i> Process Media');
 
+                        if (data.success_message) {
+                            // Remove any existing processing started message
+                            $('.alert-info').remove();
+                            // Add success message at the top of the page
+                            $('<div class="alert alert-success">' + data.success_message + '</div>')
+                            .insertBefore('.row').first();
+                        }
+
                         // Update the video container with the new video and QR code
                         if (data.output_file) {
                             var qrCodeHtml = '';
