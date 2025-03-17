@@ -118,8 +118,7 @@ def process_project(request, pk):
     thread.daemon = True  # Make sure thread doesn't block server shutdown
     thread.start()
 
-    messages.info(request,
-                  'Project processing started. This may take some time.')
+    messages.info(request,'Project processing started. This may take some time.')
     return redirect('project_detail', pk=project.pk)
 
 
