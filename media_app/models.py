@@ -69,6 +69,13 @@ class MediaItem(models.Model):
             image_types = ['jpg', 'jpeg', 'png']
             video_types = ['mp4']
 
-            if ext not in image_types and ext not in video_types:
+            if self.media_type == 'image' and ext not in image_types:
+                from django.core.exceptions import ValidationError
+                raise ValidationError(
+                    f"Selected file type '{ext}' is not allowed for images. Please use jpg, jpeg, or png.")
+            elif self.media_type == 'video' and ext not in video_types:
+                from django.core.exceptions import ValidationError
+                raise ValidationError(f"Selected file type '{ext}' is not allowed for videos. Please use mp4.")
+            elif ext not in image_types and ext not in video_types:
                 from django.core.exceptions import ValidationError
                 raise ValidationError("Only image(jpg,jpeg,png) and video files(mp4) are allowed.")
