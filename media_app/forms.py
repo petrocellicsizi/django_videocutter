@@ -7,6 +7,9 @@ class MediaProjectForm(forms.ModelForm):
     class Meta:
         model = MediaProject
         fields = ['title', 'description', 'type']
+        widgets = {
+            'type': forms.Select(attrs={'class': 'form-control'}),
+        }
 
 
 class MediaItemForm(forms.ModelForm):

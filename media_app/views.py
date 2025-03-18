@@ -53,6 +53,8 @@ def update_project_details(request, pk):
 
 @login_required
 def create_project(request):
+    project_type = request.GET.get('type')
+
     if request.method == 'POST':
         form = MediaProjectForm(request.POST)
         if form.is_valid():
@@ -65,7 +67,10 @@ def create_project(request):
             # Show form errors but don't redirect
             pass
     else:
-        form = MediaProjectForm()
+        if project_type in dict(MediaProject.PROJECT_TYPES):
+            form = MediaProjectForm(initial={'type': project_type})
+        else:
+            form = MediaProjectForm()
 
     return render(request, 'media_app/create_project.html', {'form': form})
 

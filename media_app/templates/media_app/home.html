@@ -32,7 +32,7 @@
 
 <div class="mt-5 row text-center d-flex justify-content-center">
     <div class="col-md-4">
-        <a href="{% url 'create_project' %}" class="card shadow-sm p-3 text-decoration-none" style="border-radius: 15px; background: url('media/needed_media/city.jpg') no-repeat center center; background-size: cover; color: white;">
+        <a href="{% url 'create_project' %}?type=life_story" class="card shadow-sm p-3 text-decoration-none" style="border-radius: 15px; background: url('media/needed_media/city.jpg') no-repeat center center; background-size: cover; color: white;">
             <div class="card-body">
                 <i class="fas fa-video fa-2x mb-2"></i>
                 <h4 class="font-weight-bold">Life Story</h4>
@@ -41,7 +41,7 @@
         </a>
     </div>
     <div class="col-md-4">
-        <a href="{% url 'create_project' %}" class="card shadow-sm p-3 text-decoration-none" style="border-radius: 15px; background: url('media/needed_media/table.jpg') no-repeat center center; background-size: cover; color: white;">
+        <a href="{% url 'create_project' %}?type=event_coverage" class="card shadow-sm p-3 text-decoration-none" style="border-radius: 15px; background: url('media/needed_media/table.jpg') no-repeat center center; background-size: cover; color: white;">
             <div class="card-body">
                 <i class="fas fa-camera fa-2x mb-2"></i>
                 <h4 class="font-weight-bold">Event Coverage</h4>
@@ -50,7 +50,7 @@
         </a>
     </div>
     <div class="col-md-4">
-        <a href="{% url 'create_project' %}" class="card shadow-sm p-3 text-decoration-none" style="border-radius: 15px; background: url('media/needed_media/bulb.avif') no-repeat center center; background-size: cover; color: white;">
+        <a href="{% url 'create_project' %}?type=memory_collection" class="card shadow-sm p-3 text-decoration-none" style="border-radius: 15px; background: url('media/needed_media/bulb.avif') no-repeat center center; background-size: cover; color: white;">
             <div class="card-body">
                 <i class="fas fa-qrcode fa-2x mb-2"></i>
                 <h4 class="font-weight-bold">Memory Collection</h4>
