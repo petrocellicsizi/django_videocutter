@@ -213,6 +213,7 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jqueryui/1.12.1/jquery-ui.min.js"></script>
 <script>
     $(function() {
+        // Initialize sortable for media items
         $("#media-items-container").sortable({
             handle: ".media-item-handle",
             update: function(event, ui) {
@@ -239,24 +240,24 @@
         {% if project.status == 'processing' %}
         function checkProjectStatus() {
             $.ajax({
-                url: '{% url "check_project_status" project.id %}',  // We'll create this view
+                url: '{% url "check_project_status" project.id %}',
                 type: 'GET',
                 dataType: 'json',
                 success: function(data) {
                     // Update the status badge
                     $('#project-status').text(data.status);
 
-                   if (data.status === 'completed') {
+                    if (data.status === 'completed') {
                         // Enable the process button
                         $('#process-button').prop('disabled', false);
                         $('#process-button').html('<i class="fas fa-play-circle"></i> Process Media');
 
                         if (data.success_message) {
                             // Remove any existing processing started message
-                            $('.alert-info').remove();
+                            $('.alert-info:contains("Project processing started")').remove();
                             // Add success message at the top of the page
                             $('<div class="alert alert-success">' + data.success_message + '</div>')
-                            .insertBefore('.row').first();
+                                .insertBefore('.row:first');
                         }
 
                         // Update the video container with the new video and QR code
@@ -265,53 +266,53 @@
                             var qrCodeButtonHtml = '';
 
                             if (data.qr_code) {
-                                qrCodeButtonHtml = `<a href="${data.qr_code}" class="btn btn-secondary" download>Download QR Code</a>`;
-                                qrCodeHtml = `
-                                <div class="qrcode-container">
-                                    <img src="${data.qr_code}" class="qrcode-img" alt="QR Code for Video">
-                                    <p class="text-muted">Scan this QR code to access the video</p>
-                                </div>`;
+                                qrCodeButtonHtml = '<a href="' + data.qr_code + '" class="btn btn-secondary" download>Download QR Code</a>';
+                                qrCodeHtml =
+                                    '<div class="qrcode-container">' +
+                                        '<img src="' + data.qr_code + '" class="qrcode-img" alt="QR Code for Video">' +
+                                        '<p class="text-muted">Scan this QR code to access the video</p>' +
+                                    '</div>';
                             }
 
                             var videoHtml = '';
 
                             if (data.is_drive_link) {
                                 // Google Drive version
-                                videoHtml = `
-                                <div class="card mb-4">
-                                    <div class="card-header bg-success text-white">
-                                        <h5 class="mb-0">Processed Video</h5>
-                                    </div>
-                                    <div class="card-body">
-                                        <div class="alert alert-info">
-                                            <p>Your video is stored on Google Drive. Click below to view or download it.</p>
-                                        </div>
-                                        <div class="d-flex justify-content-between mt-2">
-                                            <a href="${data.output_file}" class="btn btn-primary" target="_blank">View/Download Video</a>
-                                            ${qrCodeButtonHtml}
-                                        </div>
-                                        ${qrCodeHtml}
-                                    </div>
-                                </div>`;
+                                videoHtml =
+                                    '<div class="card mb-4">' +
+                                        '<div class="card-header bg-success text-white">' +
+                                            '<h5 class="mb-0">Processed Video</h5>' +
+                                        '</div>' +
+                                        '<div class="card-body">' +
+                                            '<div class="alert alert-info">' +
+                                                '<p>Your video is stored on Google Drive. Click below to view or download it.</p>' +
+                                            '</div>' +
+                                            '<div class="d-flex justify-content-between mt-2">' +
+                                                '<a href="' + data.drive_web_view_link + '" class="btn btn-primary" target="_blank">View/Download Video</a>' +
+                                                qrCodeButtonHtml +
+                                            '</div>' +
+                                            qrCodeHtml +
+                                        '</div>' +
+                                    '</div>';
                             } else {
                                 // Local storage version
-                                videoHtml = `
-                                <div class="card mb-4">
-                                    <div class="card-header bg-success text-white">
-                                        <h5 class="mb-0">Processed Video</h5>
-                                    </div>
-                                    <div class="card-body">
-                                        <video width="100%" controls>
-                                            <source src="${data.output_file}" type="video/mp4">
-                                            Your browser does not support the video tag.
-                                        </video>
-                                        <div class="d-flex justify-content-between mt-2">
-                                            <a href="${data.output_file}" class="btn btn-primary" download>Download Video</a>
-                                            ${qrCodeButtonHtml}
-                                        </div>
-                                        ${qrCodeHtml}
-                                    </div>
-                                </div>`;
+                                videoHtml =
+                                    '<div class="card mb-4">' +
+                                        '<div class="card-header bg-success text-white">' +
+                                            '<h5 class="mb-0">Processed Video</h5>' +
+                                        '</div>' +
+                                        '<div class="card-body">' +
+                                            '<video width="100%" controls>' +
+                                                '<source src="' + data.output_file + '" type="video/mp4">' +
+                                                'Your browser does not support the video tag.' +
+                                            '</video>' +
+                                            '<div class="d-flex justify-content-between mt-2">' +
+                                                '<a href="' + data.output_file + '" class="btn btn-primary" download>Download Video</a>' +
+                                                qrCodeButtonHtml +
+                                            '</div>' +
+                                            qrCodeHtml +
+                                        '</div>' +
+                                    '</div>';
                             }
 
                             $('#video-output-container').html(videoHtml);
@@ -319,22 +320,28 @@
 
                         // Stop polling once completed
                         clearInterval(statusChecker);
-                    }
                     } else if (data.status === 'failed') {
                         // Enable the process button with failure notification
                         $('#process-button').prop('disabled', false);
                         $('#process-button').html('<i class="fas fa-play-circle"></i> Try Again');
+                        // Add failure message
+                        $('<div class="alert alert-danger">Processing failed. Please try again.</div>')
+                            .insertBefore('.row:first');
                         clearInterval(statusChecker);
                     }
+                },
+                error: function(xhr, status, error) {
+                    console.error("Error checking project status:", error);
                 }
             });
         }
 
         // Check every 3 seconds
         var statusChecker = setInterval(checkProjectStatus, 3000);
+        // Also check immediately on page load
+        checkProjectStatus();
         {% endif %}
     });
-
 </script>
 {% endif %}
 {% endblock %}
