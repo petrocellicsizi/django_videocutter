@@ -171,19 +171,32 @@ def check_project_status(request, pk):
     }
 
     # If completed, include the output file URL
-    if project.status == 'completed' and project.output_file:
-        data['output_file'] = project.output_file.url
+    if project.status == 'completed':
+        # Prioritize Google Drive link if available
+        if project.drive_web_view_link:
+            data['drive_web_view_link'] = project.drive_web_view_link
+            data['output_file'] = project.drive_web_view_link  # For backward compatibility with the template
+            data['is_drive_link'] = True
+        elif project.output_file:
+            data['output_file'] = project.output_file.url
+            data['is_drive_link'] = False
+
         # Add success message
         data['success_message'] = 'Project processing finished!'
 
-        # Update QR code with actual URL if not already updated
-        if project.qr_code and "PLACEHOLDER_URL" in generate_actual_qr_code(request, project):
+        # Include QR code if available
+        if project.qr_code:
+            data['qr_code'] = project.qr_code.url
+
+        # If using local storage and placeholder URL still in QR code, update it
+        if not project.drive_web_view_link and project.qr_code and "PLACEHOLDER_URL" in generate_actual_qr_code(request,
+                                                                                                                project):
             # Full URL to the video
             video_url = request.build_absolute_uri(project.output_file.url)
             update_qr_code(project, video_url)
+            if project.qr_code:
+                data['qr_code'] = project.qr_code.url
 
-        if project.qr_code:
-            data['qr_code'] = project.qr_code.url
     return JsonResponse(data)
 
 

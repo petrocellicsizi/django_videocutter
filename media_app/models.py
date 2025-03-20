@@ -34,6 +34,8 @@ class MediaProject(models.Model):
     output_file = models.FileField(upload_to='outputs/', null=True, blank=True)
     qr_code = models.FileField(upload_to='qrcodes/', null=True, blank=True)
     type = models.CharField(max_length=20, choices=PROJECT_TYPES, default='life_story')
+    drive_file_id = models.CharField(max_length=100, null=True, blank=True)
+    drive_web_view_link = models.URLField(max_length=500, null=True, blank=True)
 
     def __str__(self):
         return self.title

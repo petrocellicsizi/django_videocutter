@@ -5,10 +5,11 @@ from PIL import Image
 from moviepy.editor import VideoFileClip, ImageClip, concatenate_videoclips, AudioFileClip
 from django.conf import settings
 import qrcode
+from .google_drive_utils import upload_file_to_drive
 
 
 def process_media_project(project):
-    """Process media items into a single video file"""
+    """Process media items into a single video file and upload to Google Drive"""
     try:
         # Ensure project ID is valid
         if project.id is None:
@@ -129,28 +130,51 @@ def process_media_project(project):
             # Full path for saving the file
             output_path = os.path.join(output_folder, output_filename)
 
-            # Save the video file
+            # Save the video file locally first
             final_clip.write_videofile(output_path, codec='libx264', fps=24)
 
-            # IMPORTANT: Store just the relative path from MEDIA_ROOT
-            # This ensures Django's FileField knows how to create the URL
-            relative_path = os.path.join('outputs', output_filename)
-            project.output_file = relative_path
+            # Upload to Google Drive
+            drive_web_view_link = upload_file_to_drive(output_path, output_filename)
 
-            # Generate QR code for the video
-            qr_filename = f"qr_project_{project.id}_{int(time.time())}.png"
-            qr_path = os.path.join(qr_folder, qr_filename)
-            relative_qr_path = os.path.join('qrcodes', qr_filename)
+            if drive_web_view_link:
+                # Store the Google Drive information in the project
+                project.drive_web_view_link = drive_web_view_link
 
-            # Create QR code with the URL to the video
-            # We're using request.build_absolute_uri in the view, not here
-            # This is just a placeholder that will be replaced in the model
-            generate_qr_code(project, relative_qr_path, qr_path)
+                # STILL store the relative path from MEDIA_ROOT for compatibility
+                # This ensures Django's FileField knows how to create the URL
+                relative_path = os.path.join('outputs', output_filename)
+                project.output_file = relative_path
 
-            project.status = 'completed'
-            project.save()
+                # Generate QR code for the GOOGLE DRIVE video
+                qr_filename = f"qr_project_{project.id}_{int(time.time())}.png"
+                qr_path = os.path.join(qr_folder, qr_filename)
+                relative_qr_path = os.path.join('qrcodes', qr_filename)
 
-            print(f"Project {project.id} completed. Output file: {relative_path}")
+                # Create QR code with the Google Drive URL to the video
+                generate_qr_code_for_drive(project, relative_qr_path, qr_path, drive_web_view_link)
+
+                project.status = 'completed'
+                project.save()
+
+                print(f"Project {project.id} completed. Output file on Drive: {drive_web_view_link}")
+            else:
+                print("Failed to upload to Google Drive, falling back to local storage")
+                # Store local file path as fallback
+                relative_path = os.path.join('outputs', output_filename)
+                project.output_file = relative_path
+
+                # Generate QR code for the local video
+                qr_filename = f"qr_project_{project.id}_{int(time.time())}.png"
+                qr_path = os.path.join(qr_folder, qr_filename)
+                relative_qr_path = os.path.join('qrcodes', qr_filename)
+
+                # Create QR code with local URL placeholder
+                generate_qr_code(project, relative_qr_path, qr_path)
+
+                project.status = 'completed'
+                project.save()
+
+                print(f"Project {project.id} completed. Local output file: {relative_path}")
 
             # Close clips properly
             for clip in clips:
@@ -171,7 +195,7 @@ def process_media_project(project):
 
 
 def generate_qr_code(project, relative_qr_path, qr_path):
-    """Generate a QR code for the given output video file"""
+    """Generate a QR code for the given output video file (local version)"""
     try:
         # We'll store the relative path first and update the actual URL in the view
         project.qr_code = relative_qr_path
@@ -196,4 +220,32 @@ def generate_qr_code(project, relative_qr_path, qr_path):
         return True
     except Exception as e:
         print(f"Error generating QR code: {str(e)}")
+        return False
+
+
+def generate_qr_code_for_drive(project, relative_qr_path, qr_path, drive_web_view_link):
+    """Generate a QR code for the Google Drive link"""
+    try:
+        # We'll store the relative path
+        project.qr_code = relative_qr_path
+
+        # Create QR code object
+        qr = qrcode.QRCode(
+            version=1,
+            error_correction=qrcode.constants.ERROR_CORRECT_L,
+            box_size=10,
+            border=4,
+        )
+
+        # Use the Google Drive web view link directly
+        qr.add_data(drive_web_view_link)
+        qr.make(fit=True)
+
+        # Create and save the QR code image
+        img = qr.make_image(fill="black", back_color="white")
+        img.save(qr_path)
+
+        return True
+    except Exception as e:
+        print(f"Error generating QR code for Drive link: {str(e)}")
         return False

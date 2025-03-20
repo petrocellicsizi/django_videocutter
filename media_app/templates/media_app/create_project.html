@@ -77,12 +77,25 @@
             </form>
 
             <div id="video-output-container">
-            {% if project.output_file %}
+            {% if project.output_file or project.drive_web_view_link %}
             <div class="card mb-4">
                 <div class="card-header bg-success text-white">
                     <h5 class="mb-0">Processed Video</h5>
                 </div>
                 <div class="card-body">
+                    {% if project.drive_web_view_link %}
+                    <!-- Google Drive Video -->
+                    <div class="alert alert-info">
+                        <p>Your video is stored on Google Drive. Click below to view or download it.</p>
+                    </div>
+                    <div class="d-flex justify-content-between mt-2">
+                        <a href="{{ project.drive_web_view_link }}" class="btn btn-primary" target="_blank">View/Download Video</a>
+                        {% if project.qr_code %}
+                        <a href="{{ project.qr_code.url }}" class="btn btn-secondary" download>Download QR Code</a>
+                        {% endif %}
+                    </div>
+                    {% else %}
+                    <!-- Local Video -->
                     <video width="100%" controls>
                         <source src="{{ project.output_file.url }}" type="video/mp4">
                         Your browser does not support the video tag.
@@ -93,6 +106,8 @@
                         <a href="{{ project.qr_code.url }}" class="btn btn-secondary" download>Download QR Code</a>
                         {% endif %}
                     </div>
+                    {% endif %}
+
                     {% if project.qr_code %}
                     <div class="qrcode-container">
                         <img src="{{ project.qr_code.url }}" class="qrcode-img" alt="QR Code for Video">
@@ -227,7 +242,7 @@
                     // Update the status badge
                     $('#project-status').text(data.status);
 
-                    if (data.status === 'completed') {
+                   if (data.status === 'completed') {
                         // Enable the process button
                         $('#process-button').prop('disabled', false);
                         $('#process-button').html('<i class="fas fa-play-circle"></i> Process Media');
@@ -254,28 +269,53 @@
                                 </div>`;
                             }
 
-                            var videoHtml = `
-                            <div class="card mb-4">
-                                <div class="card-header bg-success text-white">
-                                    <h5 class="mb-0">Processed Video</h5>
-                                </div>
-                                <div class="card-body">
-                                    <video width="100%" controls>
-                                        <source src="${data.output_file}" type="video/mp4">
-                                        Your browser does not support the video tag.
-                                    </video>
-                                    <div class="d-flex justify-content-between mt-2">
-                                        <a href="${data.output_file}" class="btn btn-primary" download>Download Video</a>
-                                        ${qrCodeButtonHtml}
+                            var videoHtml = '';
+
+                            if (data.is_drive_link) {
+                                // Google Drive version
+                                videoHtml = `
+                                <div class="card mb-4">
+                                    <div class="card-header bg-success text-white">
+                                        <h5 class="mb-0">Processed Video</h5>
                                     </div>
-                                    ${qrCodeHtml}
-                                </div>
-                            </div>`;
+                                    <div class="card-body">
+                                        <div class="alert alert-info">
+                                            <p>Your video is stored on Google Drive. Click below to view or download it.</p>
+                                        </div>
+                                        <div class="d-flex justify-content-between mt-2">
+                                            <a href="${data.output_file}" class="btn btn-primary" target="_blank">View/Download Video</a>
+                                            ${qrCodeButtonHtml}
+                                        </div>
+                                        ${qrCodeHtml}
+                                    </div>
+                                </div>`;
+                            } else {
+                                // Local storage version
+                                videoHtml = `
+                                <div class="card mb-4">
+                                    <div class="card-header bg-success text-white">
+                                        <h5 class="mb-0">Processed Video</h5>
+                                    </div>
+                                    <div class="card-body">
+                                        <video width="100%" controls>
+                                            <source src="${data.output_file}" type="video/mp4">
+                                            Your browser does not support the video tag.
+                                        </video>
+                                        <div class="d-flex justify-content-between mt-2">
+                                            <a href="${data.output_file}" class="btn btn-primary" download>Download Video</a>
+                                            ${qrCodeButtonHtml}
+                                        </div>
+                                        ${qrCodeHtml}
+                                    </div>
+                                </div>`;
+                            }
+
                             $('#video-output-container').html(videoHtml);
                         }
 
                         // Stop polling once completed
                         clearInterval(statusChecker);
+                    }
                     } else if (data.status === 'failed') {
                         // Enable the process button with failure notification
                         $('#process-button').prop('disabled', false);
@@ -290,6 +330,7 @@
         var statusChecker = setInterval(checkProjectStatus, 3000);
         {% endif %}
     });
+
 </script>
 {% endif %}
 {% endblock %}
