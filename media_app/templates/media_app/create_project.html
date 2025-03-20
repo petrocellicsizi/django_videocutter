@@ -85,6 +85,10 @@
                 <div class="card-body">
                     {% if project.drive_web_view_link %}
                     <!-- Google Drive Video -->
+                    <video width="100%" controls>
+                        <source src="{{ project.output_file.url }}" type="video/mp4">
+                        Your browser does not support the video tag.
+                    </video>
                     <div class="alert alert-info">
                         <p>Your video is stored on Google Drive. Click below to view or download it.</p>
                     </div>
