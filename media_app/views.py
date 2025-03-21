@@ -94,7 +94,7 @@ def project_detail(request, pk):
             # Just show error messages
             for error in form.errors.get('file', []):
                 messages.error(request, error)
-            return redirect('project_detail', pk=project.pk)
+            # return redirect('project_detail', pk=project.pk)
     else:
         form = MediaItemForm()
 
@@ -148,17 +148,26 @@ def update_item_order(request):
 @require_POST
 def delete_item(request, item_id):
     item = get_object_or_404(MediaItem, id=item_id)
+    project = item.project
 
     # Ensure user can only delete their own items
-    if item.project.user != request.user:
+    if project.user != request.user:
         messages.error(request, 'You do not have permission to delete this item.')
-        return redirect('project_detail', pk=item.project.pk)
+        return redirect('project_detail', pk=project.pk)
 
-    project_id = item.project.id
-    item.delete()
+    # Check if project is currently being processed
+    if project.status == 'processing':
+        messages.error(request,
+                       'Cannot delete media while the project is being processed. Please wait for processing to complete.')
+        return redirect('project_detail', pk=project.pk)
 
-    messages.success(request, 'Media item deleted successfully.')
-    return redirect('project_detail', pk=project_id)
+    try:
+        item.delete()
+        messages.success(request, 'Media item deleted successfully.')
+    except PermissionError:
+        messages.error(request, 'Cannot delete media. The file may be in use by another process. Try again later.')
+
+    return redirect('project_detail', pk=project.pk)
 
 
 @login_required

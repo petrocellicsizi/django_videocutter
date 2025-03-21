@@ -59,11 +59,28 @@ class MediaItem(models.Model):
     def __str__(self):
         return f"{self.media_type} for {self.project.title}"
 
+    # Add this to your MediaItem model in models.py
     def delete(self, *args, **kwargs):
-        # Delete associated file
-        if self.file and os.path.isfile(self.file.path):
-            os.remove(self.file.path)
+        # Store file path for later deletion attempt
+        file_path = self.file.path if self.file else None
+
+        # First remove the file field reference from the model
+        # This keeps the database clean even if file deletion fails
+        if self.file:
+            self.file = None
+            self.save(update_fields=['file'])
+
+        # Delete the model instance
         super().delete(*args, **kwargs)
+
+        # Now try to delete the actual file
+        if file_path and os.path.exists(file_path):
+            try:
+                os.remove(file_path)
+            except (PermissionError, OSError) as e:
+                # Log the error but don't raise an exception
+                print(f"Warning: Could not delete file {file_path}: {e}")
+                # Optionally, you could add this file to a cleanup queue for later deletion
 
     def clean(self):
         if self.file:
@@ -81,3 +98,34 @@ class MediaItem(models.Model):
             elif ext not in image_types and ext not in video_types:
                 from django.core.exceptions import ValidationError
                 raise ValidationError("Only image(jpg,jpeg,png) and video files(mp4) are allowed.")
+
+            # Add video duration check
+            if self.media_type == 'video' and ext in video_types:
+                try:
+                    # Import here to avoid circular imports
+                    from moviepy.editor import VideoFileClip
+                    import tempfile
+                    import os
+
+                    # Create a temporary file to check the duration
+                    with tempfile.NamedTemporaryFile(delete=False) as temp:
+                        for chunk in self.file.chunks():
+                            temp.write(chunk)
+
+                    try:
+                        with VideoFileClip(temp.name) as video:
+                            if video.duration > 120:
+                                from django.core.exceptions import ValidationError
+                                raise ValidationError(
+                                    "Videos must be 120 seconds (2 minutes) or shorter. Please trim your video before uploading.")
+                    except Exception as e:
+                        from django.core.exceptions import ValidationError
+                        raise ValidationError(f"Error validating video: {str(e)}")
+                    finally:
+                        # Clean up temp file
+                        if os.path.exists(temp.name):
+                            os.remove(temp.name)
+
+                except ImportError:
+                    # If moviepy is not available, skip this validation
+                    pass

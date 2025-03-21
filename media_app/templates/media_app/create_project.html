@@ -37,6 +37,23 @@
         margin: 10px auto;
         display: block;
     }
+    .video-container {
+        position: relative;
+    }
+    .video-error {
+        min-height: 150px;
+        background-color: #f8f9fa;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    }
+    .video-error::before {
+        content: "\f03d";  /* Film icon from FontAwesome */
+        font-family: "Font Awesome 5 Free";
+        font-weight: 900;
+        font-size: 2rem;
+        color: #adb5bd;
+}
 </style>
 {% endblock %}
 
@@ -144,10 +161,15 @@
                     {% if item.media_type == 'image' %}
                     <img src="{{ item.file.url }}" class="media-preview">
                     {% else %}
-                    <video class="media-preview" controls>
-                        <source src="{{ item.file.url }}" type="video/mp4">
-                        Your browser does not support the video tag.
-                    </video>
+                    <div class="video-container">
+                        <!-- Standard video player attempt -->
+                        <video class="media-preview" controls preload="metadata"
+                               poster="{% if item.thumbnail %}{{ item.thumbnail.url }}{% endif %}"
+                               onloadeddata="this.classList.add('video-loaded')"
+                               onerror="this.classList.add('video-error');">
+                            <source src="{{ item.file.url }}" type="video/mp4">
+                        </video>
+                    </div>
                     {% endif %}
                 </div>
                 {% endfor %}
