@@ -94,7 +94,7 @@ def project_detail(request, pk):
             # Just show error messages
             for error in form.errors.get('file', []):
                 messages.error(request, error)
-            # Return to the same page with the filled form
+            return redirect('project_detail', pk=project.pk)
     else:
         form = MediaItemForm()
 

@@ -42,7 +42,6 @@ def upload_file_to_drive(file_path, file_name):
     try:
         service = get_drive_service()
         if not service:
-            print("oooo no service")
             return None
 
         # Determine the MIME type of the file
