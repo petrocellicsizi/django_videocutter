@@ -199,6 +199,7 @@ def generate_qr_code(project, relative_qr_path, qr_path):
     try:
         # We'll store the relative path first and update the actual URL in the view
         project.qr_code = relative_qr_path
+        project.save()
 
         # Create QR code object
         qr = qrcode.QRCode(
@@ -228,6 +229,7 @@ def generate_qr_code_for_drive(project, relative_qr_path, qr_path, drive_web_vie
     try:
         # We'll store the relative path
         project.qr_code = relative_qr_path
+        project.save()
 
         # Create QR code object
         qr = qrcode.QRCode(
