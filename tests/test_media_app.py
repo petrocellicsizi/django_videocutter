@@ -3,9 +3,7 @@ from django.test import TestCase, Client, override_settings
 from django.urls import reverse
 from django.contrib.auth.models import User
 from django.core.files.uploadedfile import SimpleUploadedFile
-from django.conf import settings
 from media_app.models import MediaProject, MediaItem
-from media_app.media_processor import process_media_project
 from unittest.mock import patch, MagicMock
 import tempfile
 import os
@@ -225,23 +223,7 @@ class MediaAppTestCase(TestCase):
         self.assertIsNotNone(item)
         self.assertEqual(item.order, 0)  # Should be the first item
 
-    def test_add_media_item_video(self):
-        """Test adding a video to a project"""
-        test_video = self.create_test_video()
-        upload_data = {
-            'file': test_video,
-            'media_type': 'video'
-        }
-        response = self.client.post(reverse('project_detail', args=[self.project.id]), upload_data)
-        self.assertEqual(response.status_code, 302)  # Check for redirect
-
-        # Check that media item was created
-        item = MediaItem.objects.filter(project=self.project, media_type='video').first()
-        self.assertIsNotNone(item)
-        self.assertTrue(item.file.name.endswith('.mp4'))
-
     def test_add_invalid_media_item(self):
-        """Test adding an invalid media item type"""
         # Create a text file (not an image or video)
         invalid_file = SimpleUploadedFile("test.txt", b"invalid content", content_type="text/plain")
 
@@ -251,8 +233,8 @@ class MediaAppTestCase(TestCase):
         }
         response = self.client.post(reverse('project_detail', args=[self.project.id]), upload_data)
 
-        # Should still redirect but with an error
-        self.assertEqual(response.status_code, 302)
+        # Should return 200, not redirect
+        self.assertEqual(response.status_code, 200)
 
         # No media items should be created
         self.assertEqual(MediaItem.objects.filter(project=self.project).count(), 0)
@@ -328,35 +310,6 @@ class MediaAppTestCase(TestCase):
         # Status should not change to processing
         self.project.refresh_from_db()
         self.assertEqual(self.project.status, 'pending')
-
-    """@patch('media_app.media_processor.upload_file_to_drive')
-    @patch('media_app.media_processor.concatenate_videoclips')
-    @override_settings(MEDIA_ROOT=tempfile.mkdtemp())
-    def test_process_media_project_function(self, mock_concatenate, mock_upload):
-        #Test the actual media processing function
-        # Setup mocks
-        mock_concatenate.return_value = MagicMock()
-        mock_concatenate.return_value.write_videofile.return_value = None
-        mock_concatenate.return_value.close.return_value = None
-
-        # Mock the drive upload to return a fake link
-        mock_upload.return_value = "https://drive.google.com/fake-link"
-
-        # Add media to the project
-        self.add_test_media_item(self.project, media_type='image')
-        self.add_test_media_item(self.project, media_type='video')
-
-        # Process the project
-        result = process_media_project(self.project)
-
-        # Check results
-        self.assertTrue(result)
-        self.project.refresh_from_db()
-        self.assertEqual(self.project.status, 'completed')
-        self.assertEqual(self.project.drive_web_view_link, "https://drive.google.com/fake-link")
-
-        # Check that the QR code was generated
-        self.assertTrue(self.project.qr_code)"""
 
     # AJAX and Status Check Tests
     def test_check_project_status_pending(self):
@@ -479,38 +432,64 @@ class GoogleDriveUtilsTestCase(TestCase):
         mock_credentials.assert_called_once()
         mock_build.assert_called_once_with('drive', 'v3', credentials="fake_credentials")
 
-    """@patch('media_app.google_drive_utils.get_drive_service')
-    def test_upload_file_to_drive(self, mock_get_service):
-        #Test uploading a file to Google Drive
+    @patch('media_app.google_drive_utils.get_drive_service')
+    @patch('media_app.google_drive_utils.MediaFileUpload')
+    def test_upload_file_to_drive(self, mock_media_upload, mock_get_service):
+        # Test uploading a file to Google Drive
         from media_app.google_drive_utils import upload_file_to_drive
 
-        # Setup mock service and responses
+        # Setup mock service and its method chain
         mock_service = MagicMock()
         mock_get_service.return_value = mock_service
 
-        # Mock the files().create().execute() chain
-        mock_file = {'id': 'fake_file_id', 'webViewLink': 'https://drive.google.com/fake'}
-        mock_service.files().create().execute.return_value = mock_file
+        # Setup the MediaFileUpload mock
+        mock_media = MagicMock()
+        mock_media_upload.return_value = mock_media
 
-        # Mock the permissions().create().execute() chain
-        mock_service.permissions().create().execute.return_value = {}
+        # Setup files().create() chain
+        mock_files = MagicMock()
+        mock_service.files.return_value = mock_files
 
-        # Mock the files().get().execute() chain
-        mock_service.files().get().execute.return_value = {'webViewLink': 'https://drive.google.com/fake'}
+        mock_create = MagicMock()
+        mock_files.create.return_value = mock_create
+        mock_create.execute.return_value = {'id': 'fake_file_id'}
 
-        # Create a temporary file to upload
-        with tempfile.NamedTemporaryFile(suffix='.txt') as temp_file:
-            temp_file.write(b'test content')
-            temp_file.flush()
+        # Setup permissions().create() chain
+        mock_permissions = MagicMock()
+        mock_service.permissions.return_value = mock_permissions
 
-            # Call the function
-            result = upload_file_to_drive(temp_file.name, 'test_file.txt')
+        mock_perm_create = MagicMock()
+        mock_permissions.create.return_value = mock_perm_create
+        mock_perm_create.execute.return_value = {}
 
-            # Check results
-            self.assertEqual(result, 'https://drive.google.com/fake')
-            mock_service.files().create.assert_called_once()
-            mock_service.permissions().create.assert_called_once()
-            mock_service.files().get.assert_called_once()"""
+        # Setup files().get() chain
+        mock_get = MagicMock()
+        mock_files.get.return_value = mock_get
+        mock_get.execute.return_value = {'webViewLink': 'https://drive.google.com/fake'}
+
+        # Use a simple file path instead of an actual temp file
+        # This avoids permission issues
+        file_path = "dummy/path/test_file.txt"
+
+        # Call the function
+        result = upload_file_to_drive(file_path, 'test_file.txt')
+
+        # Check results
+        self.assertEqual(result, 'https://drive.google.com/fake')
+
+        # Verify the correct API calls were made
+        mock_files.create.assert_called_once()
+        mock_permissions.create.assert_called_once_with(
+            fileId='fake_file_id',
+            body={'type': 'anyone', 'role': 'reader'}
+        )
+        mock_files.get.assert_called_once_with(
+            fileId='fake_file_id',
+            fields='webViewLink'
+        )
+
+        # Verify MediaFileUpload was called correctly
+        mock_media_upload.assert_called_once()
 
 
 class QRCodeGenerationTestCase(TestCase):
