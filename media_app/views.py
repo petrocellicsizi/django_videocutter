@@ -1,4 +1,3 @@
-# media_app/views.py
 from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.auth.decorators import login_required
 from django.contrib import messages
@@ -15,11 +14,13 @@ from django.conf import settings
 
 @login_required
 def home(request):
+    # Renders the home page for authenticated users only
     return render(request, 'media_app/home.html')
 
 
 @login_required
 def update_project_type(request, pk):
+    # Updates the project type for an existing project
     project = get_object_or_404(MediaProject, pk=pk, user=request.user)
 
     if request.method == 'POST':
@@ -34,6 +35,7 @@ def update_project_type(request, pk):
 
 @login_required
 def update_project_details(request, pk):
+    # Updates title and description for an existing project
     project = get_object_or_404(MediaProject, pk=pk, user=request.user)
 
     if request.method == 'POST':
@@ -53,6 +55,7 @@ def update_project_details(request, pk):
 
 @login_required
 def create_project(request):
+    # Handles creation of new media projects
     project_type = request.GET.get('type')
 
     if request.method == 'POST':
@@ -77,6 +80,7 @@ def create_project(request):
 
 @login_required
 def project_detail(request, pk):
+    # Displays project details and handles adding new media items
     project = get_object_or_404(MediaProject, pk=pk, user=request.user)
     items = project.media_items.all().order_by('order')
 
@@ -85,16 +89,14 @@ def project_detail(request, pk):
         if form.is_valid():
             media_item = form.save(commit=False)
             media_item.project = project
-            media_item.order = items.count()
+            media_item.order = items.count()  # Add at the end of the list
             media_item.save()
             messages.success(request, 'Media added successfully!')
             return redirect('project_detail', pk=project.pk)
         else:
-            # Form is not valid, but don't redirect away from the project
-            # Just show error messages
+            # Form is not valid, show error messages
             for error in form.errors.get('file', []):
                 messages.error(request, error)
-            # return redirect('project_detail', pk=project.pk)
     else:
         form = MediaItemForm()
 
@@ -108,19 +110,20 @@ def project_detail(request, pk):
 @login_required
 @require_POST
 def process_project(request, pk):
+    # Initiates background processing of media project
     project = get_object_or_404(MediaProject, pk=pk, user=request.user)
 
     if project.media_items.count() == 0:
         messages.error(request, 'Add media to your project before processing!')
         return redirect('project_detail', pk=project.pk)
 
-    # First update the status to let the user know processing has started
+    # Update status to show processing has started
     project.status = 'processing'
     project.save()
 
     # Start processing in background thread
     thread = threading.Thread(target=process_media_project, args=(project,))
-    thread.daemon = True  # Make sure thread doesn't block server shutdown
+    thread.daemon = True  # Ensure thread doesn't block server shutdown
     thread.start()
 
     messages.info(request,'Project processing started. This may take some time.')
@@ -130,11 +133,12 @@ def process_project(request, pk):
 @login_required
 @require_POST
 def update_item_order(request):
+    # Updates the order of media items in a project via AJAX
     item_ids = request.POST.getlist('item_order[]')
 
     for index, item_id in enumerate(item_ids):
         item = get_object_or_404(MediaItem, id=item_id)
-        # Ensure user can only reorder their own items
+        # Security check: ensure user owns the items
         if item.project.user != request.user:
             return JsonResponse({'status': 'error'}, status=403)
 
@@ -147,15 +151,16 @@ def update_item_order(request):
 @login_required
 @require_POST
 def delete_item(request, item_id):
+    # Deletes a media item from a project
     item = get_object_or_404(MediaItem, id=item_id)
     project = item.project
 
-    # Ensure user can only delete their own items
+    # Security check: ensure user owns the item
     if project.user != request.user:
         messages.error(request, 'You do not have permission to delete this item.')
         return redirect('project_detail', pk=project.pk)
 
-    # Check if project is currently being processed
+    # Prevent deletion during processing
     if project.status == 'processing':
         messages.error(request,
                        'Cannot delete media while the project is being processed. Please wait for processing to complete.')
@@ -172,19 +177,19 @@ def delete_item(request, item_id):
 
 @login_required
 def check_project_status(request, pk):
-    """AJAX endpoint to check the processing status of a project"""
+    # AJAX endpoint to check project processing status
     project = get_object_or_404(MediaProject, pk=pk, user=request.user)
 
     data = {
         'status': project.status,
     }
 
-    # If completed, include the output file URL
+    # For completed projects, include output file information
     if project.status == 'completed':
         # Prioritize Google Drive link if available
         if project.drive_web_view_link:
             data['drive_web_view_link'] = project.drive_web_view_link
-            data['output_file'] = project.drive_web_view_link  # For backward compatibility with the template
+            data['output_file'] = project.drive_web_view_link  # For backward compatibility
             data['is_drive_link'] = True
         elif project.output_file:
             data['output_file'] = project.output_file.url
@@ -197,7 +202,7 @@ def check_project_status(request, pk):
         if project.qr_code:
             data['qr_code'] = project.qr_code.url
 
-        # If using local storage and placeholder URL still in QR code, update it
+        # Update QR code if needed (for local storage)
         if not project.drive_web_view_link and project.qr_code and "PLACEHOLDER_URL" in generate_actual_qr_code(request,
                                                                                                                 project):
             # Full URL to the video
@@ -210,7 +215,7 @@ def check_project_status(request, pk):
 
 
 def generate_actual_qr_code(request, project):
-    """Check if QR code needs to be updated with actual URL"""
+    # Checks if QR code exists and needs updating
     try:
         if not project.qr_code:
             return "No QR code available"
@@ -221,7 +226,7 @@ def generate_actual_qr_code(request, project):
         if not os.path.exists(qr_path):
             return "QR code file not found"
 
-        # For debugging - return placeholder to indicate it needs updating
+        # Return placeholder to indicate it needs updating
         return "PLACEHOLDER_URL"
 
     except Exception as e:
@@ -230,7 +235,7 @@ def generate_actual_qr_code(request, project):
 
 
 def update_qr_code(project, video_url):
-    """Update the QR code with the actual video URL"""
+    # Updates QR code to link to the actual video URL
     try:
         qr_path = os.path.join(settings.MEDIA_ROOT, project.qr_code.name)
 

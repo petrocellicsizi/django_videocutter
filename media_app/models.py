@@ -1,9 +1,9 @@
-# media_app/models.py
 from django.db import models
 from django.contrib.auth.models import User
 import os
 import uuid
-
+from moviepy.editor import VideoFileClip
+import tempfile
 
 def get_file_path(instance, filename):
     ext = filename.split('.')[-1]
@@ -102,11 +102,6 @@ class MediaItem(models.Model):
             # Add video duration check
             if self.media_type == 'video' and ext in video_types:
                 try:
-                    # Import here to avoid circular imports
-                    from moviepy.editor import VideoFileClip
-                    import tempfile
-                    import os
-
                     # Create a temporary file to check the duration
                     with tempfile.NamedTemporaryFile(delete=False) as temp:
                         for chunk in self.file.chunks():
