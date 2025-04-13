@@ -1,5 +1,3 @@
-# Create a new file called google_drive_utils.py in your project directory
-
 from google.oauth2 import service_account
 from googleapiclient.discovery import build
 from googleapiclient.http import MediaFileUpload

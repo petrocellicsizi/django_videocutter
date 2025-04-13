@@ -1,4 +1,3 @@
-# Add to forms.py
 from django import forms
 from .models import MediaProject, MediaItem
 

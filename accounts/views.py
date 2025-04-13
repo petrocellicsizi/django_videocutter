@@ -8,10 +8,12 @@ from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from django.shortcuts import render, redirect
 
+# Configure logging for this module
 logger = logging.getLogger(__name__)
 
 
 def register(request):
+    # Handles user registration and account creation
     if request.method == 'POST':
         form = UserRegisterForm(request.POST)
         if form.is_valid():
@@ -26,25 +28,28 @@ def register(request):
 
 @login_required
 def profile(request):
+    # Handles profile display, updates, project listing, and project deletion
+    # Ensure user has a profile, creating one if needed
     profile, created = Profile.objects.get_or_create(user=request.user)
 
-    # Get search query from request, if any
+    # Get search query parameter if provided
     search_query = request.GET.get('search', '')
 
-    # Filter projects by user and optionally by search query
+    # Get user's projects
     projects = MediaProject.objects.filter(user=request.user)
 
+    # Filter projects by search query if provided
     if search_query:
-        # Search in title field and description/content (adjust field names as needed)
         projects = projects.filter(
             Q(title__icontains=search_query) |
-            Q(description__icontains=search_query)  # Assuming MediaProject has a description field
+            Q(description__icontains=search_query)
         )
 
-    # Sort projects by creation date
+    # Sort projects by creation date (newest first)
     projects = projects.order_by('-created_at')
 
     if request.method == 'POST':
+        # Handle project deletion
         if 'delete_project' in request.POST:
             project_id = request.POST.get('project_id')
             try:
@@ -58,6 +63,7 @@ def profile(request):
                 messages.error(request, f'An error occurred: {str(e)}')
             return redirect('profile')
 
+        # Handle profile update
         u_form = UserUpdateForm(request.POST, instance=request.user)
         p_form = ProfileUpdateForm(request.POST, instance=profile)
 
@@ -67,9 +73,11 @@ def profile(request):
             messages.success(request, 'Your account has been updated!')
             return redirect('profile')
     else:
+        # Initialize forms with current user data
         u_form = UserUpdateForm(instance=request.user)
         p_form = ProfileUpdateForm(instance=profile)
 
+    # Prepare template context
     context = {
         'u_form': u_form,
         'p_form': p_form,
@@ -81,6 +89,7 @@ def profile(request):
 
 @login_required
 def logout_view(request):
+    # Handles user logout and redirects to login page
     logout(request)
     messages.success(request, "You have been logged out successfully.")
-    return redirect('login')  # Redirect to the login page
+    return redirect('login')
